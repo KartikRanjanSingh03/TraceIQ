@@ -1,0 +1,28 @@
+# TraceIQ — Docker Compose
+# Spins up a local PostgreSQL 15 instance per 03_TECH_STACK.md §2 and 10_DATABASE_DESIGN.md §2.
+# Usage:
+#   docker compose up -d          # start Postgres in background
+#   docker compose down           # stop (data volume persists)
+#   docker compose down -v        # stop + wipe data
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: traceiq_postgres
+    environment:
+      POSTGRES_USER: traceiq_user
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: traceiq
+    ports:
+      - "5432:5432"
+    volumes:
+      - traceiq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traceiq_user -d traceiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  traceiq_pgdata:
+    # Named volume — data persists across container restarts (10_DATABASE_DESIGN.md §9)

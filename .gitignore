@@ -1,0 +1,68 @@
+# ── Secrets & local config ──────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.secret
+secrets/
+streamlit/secrets.toml
+.streamlit/secrets.toml
+
+# ── Python bytecode & caches ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env.bak
+
+# ── Build artefacts ───────────────────────────────────────────────────────────
+*.egg-info/
+dist/
+build/
+*.egg
+wheels/
+pip-wheel-metadata/
+
+# ── Test & coverage ───────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ── Logs & runtime files ──────────────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+
+# ── Database & generated data ─────────────────────────────────────────────────
+# Seed CSVs are generated, not committed — run data/generate_synthetic_data.py
+data/seed/
+# ChromaDB vector index is built at runtime from seed data
+data/chroma_db/
+
+# ── IDE & OS ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Type stubs ────────────────────────────────────────────────────────────────
+*.pyi

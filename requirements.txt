@@ -1,0 +1,47 @@
+# TraceIQ — pinned requirements (Python 3.11+)
+# Per 03_TECH_STACK.md §2
+
+# Core data processing
+pandas==2.2.3
+numpy==1.26.4
+
+# Statistics / anomaly detection
+statsmodels==0.14.4
+scikit-learn==1.5.2
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.36
+
+# Unstructured retrieval
+sentence-transformers==3.3.1
+chromadb==0.5.20
+
+# Backend / API
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+starlette>=0.37.2,<0.39.0   # pinned: streamlit 1.62 ships starlette 1.6 which breaks FastAPI
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+
+# Frontend
+streamlit==1.62.0
+plotly==7.0.0
+
+# Scheduling (simulates daily/hourly batch cadence, per 03_TECH_STACK.md)
+schedule==1.2.2
+
+# Config / environment
+python-dotenv==1.0.1
+pyyaml==6.0.2
+
+# LLM providers — both available; active one selected via LLM_PROVIDER env var
+# (per 09_LLM_ARCHITECTURE.md §8 — swappable without architecture change)
+anthropic==0.40.0
+google-generativeai==0.8.3
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1

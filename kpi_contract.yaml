@@ -1,0 +1,153 @@
+# kpi_contract.yaml — TraceIQ KPI Semantic Contract
+# Single source of truth for all KPI definitions, formulas, thresholds, dimensions, and access.
+# Per 04_KPI_SEMANTIC_CONTRACT.md §8: every downstream module reads from this file —
+# no module hardcodes a KPI formula or threshold independently.
+# Per CLAUDE.md §4: no hardcoded formulas/thresholds in application code.
+
+domain: retail_ecommerce
+currency: INR
+analysis_grain: daily  # common grain all structured sources are reconciled to
+
+dimensions:
+  - date
+  - region       # North / South / East / West
+  - category     # Electronics / Apparel / Home
+  - product_id   # SKU level
+  - channel      # Online / Marketplace / In-store
+  - customer_segment  # New / Returning / Premium
+
+kpis:
+
+  - name: Revenue
+    formula: "SUM(revenue)"           # revenue column already = units * price * (1 - discount_pct)
+    high_level_formula: "Orders * AOV"
+    unit: INR
+    source_table: "raw.orders"
+    grain: [date, region, category, product_id, channel, customer_segment]
+    drivers:
+      - order_volume
+      - pricing_discounting
+      - product_mix
+      - customer_segment_mix
+    statistical_threshold:
+      zscore: 2
+      window_days: 90
+      persistence_days: 2            # must cross threshold ≥2 consecutive days → INVESTIGATE
+    materiality_threshold:
+      absolute_inr: 100000           # ₹1,00,000/day at affected grain
+    sparse_history_days: 30          # <30 days → fall back to category-level baseline
+    access:
+      regional_leader:
+        row_filter: "region = :user_region"
+        columns: kpi_only            # date, region, category, revenue, order_count, aov
+      analyst:
+        row_filter: "none"
+        columns: all
+
+  - name: Orders
+    formula: "COUNT(DISTINCT order_id)"
+    unit: count
+    source_table: "raw.orders"
+    grain: [date, region, category, channel, customer_segment]
+    drivers:
+      - demand
+      - inventory_availability
+      - delivery_reliability
+      - marketing_promotions
+      - competitor_activity
+    statistical_threshold:
+      zscore: 2
+      window_days: 90
+      persistence_days: 2
+    materiality_threshold:
+      absolute_count: 50             # >50 orders/day at affected grain
+    sparse_history_days: 30
+    access:
+      regional_leader:
+        row_filter: "region = :user_region"
+        columns: kpi_only
+      analyst:
+        row_filter: "none"
+        columns: all
+
+  - name: AOV
+    formula: "SUM(revenue) / NULLIF(COUNT(DISTINCT order_id), 0)"
+    unit: INR
+    source_table: "raw.orders"
+    grain: [date, region, category, channel]
+    drivers:
+      - pricing
+      - discounting
+      - product_mix
+      - upsell_crosssell
+    statistical_threshold:
+      zscore: 2
+      window_days: 90
+      persistence_days: 2
+    materiality_threshold:
+      absolute_inr: 500              # ₹500/order movement at affected grain (MVP default)
+    sparse_history_days: 30
+    access:
+      regional_leader:
+        row_filter: "region = :user_region"
+        columns: kpi_only
+      analyst:
+        row_filter: "none"
+        columns: all
+
+  - name: InventoryAvailability
+    formula: "1.0 - (SUM(CASE WHEN stockout_flag THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0))"
+    unit: ratio                      # 0.0–1.0
+    source_table: "raw.inventory_snapshots"
+    grain: [date, region, category, product_id]
+    drivers:
+      - warehouse_supply
+      - replenishment_lead_time
+      - demand_forecast_accuracy
+    statistical_threshold:
+      drop_pct_points: 10            # >10 percentage-point drop triggers check
+      window_days: 90
+      persistence_days: 1            # single day is significant for inventory
+    materiality_threshold:
+      min_revenue_share_pct: 5       # affects category contributing >5% of regional revenue
+    sparse_history_days: 30
+    access:
+      regional_leader:
+        row_filter: "region = :user_region"
+        columns: kpi_only
+      analyst:
+        row_filter: "none"
+        columns: all
+
+  - name: DeliverySLA
+    formula: "1.0 - (SUM(CASE WHEN sla_breach_flag THEN 1 ELSE 0 END)::FLOAT / NULLIF(COUNT(*), 0))"
+    unit: ratio
+    source_table: "raw.deliveries"
+    grain: [date, region]            # aggregated from event-level per 06_DATA_SOURCES.md §4.3
+    drivers:
+      - logistics_capacity
+      - warehouse_dispatch_delay
+      - courier_performance
+      - disruption_events
+    statistical_threshold:
+      drop_pct_points: 10
+      window_days: 90
+      persistence_days: 1
+    materiality_threshold:
+      min_shipments_per_day: 100     # affects >100 shipments/day
+    sparse_history_days: 30
+    access:
+      regional_leader:
+        row_filter: "region = :user_region"
+        columns: kpi_only
+      analyst:
+        row_filter: "none"
+        columns: all
+
+# Confidence label bands (07_ANALYTICS_AND_DRIVER_ANALYSIS.md §6.2)
+# Used by confidence/scoring.py — never exposed as raw numbers to LLM or UI
+confidence_bands:
+  strong:      {min_score: 0.75, label: "Strong"}
+  moderate:    {min_score: 0.50, label: "Moderate"}
+  weak:        {min_score: 0.25, label: "Weak"}
+  insufficient: {min_score: 0.0,  label: "Insufficient"}
